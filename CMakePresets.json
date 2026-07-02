@@ -4,7 +4,7 @@
         {
             "name": "stm32-f4-debug",
             "displayName": "STM32F4 Debug编译",
-            "description": "Ninja构建 + STM32交叉编译工具链",
+            "description": "Ninja高速构建 + STM32交叉编译工具链",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
@@ -12,6 +12,14 @@
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "stm32-f4-debug",
+            "displayName": "构建STM32F4 Debug固件",
+            "configurePreset": "stm32-f4-debug",
+            "targets": ["all"]
         }
     ]
 }
