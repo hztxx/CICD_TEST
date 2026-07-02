@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "user.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +66,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  int ADf_dj;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -75,7 +75,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  user_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -89,7 +89,10 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+    uint8_t test_buf[32] = {1,2,3};
+    StUserData test_data;
+    user_set_data(&test_data, test_buf, 3);
+    uint16_t t = user_get_timeout();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,7 +100,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+      
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

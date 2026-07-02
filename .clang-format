@@ -1,0 +1,11 @@
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+# 命名基础约束
+DerivePointerAlignment: false
+PointerAlignment: Left
+# 宏全部大写
+MacroBlockBegin: ""
+MacroBlockEnd: ""
