@@ -11,7 +11,7 @@ void user_init(void)
 {
     // 局部变量 纯小写下划线
     uint16_t buf_index = 0;
-
+    int Test_abc;
     // 清空全局数据
     for(buf_index = 0; buf_index < USER_DATA_MAX_LEN; buf_index++)
     {
