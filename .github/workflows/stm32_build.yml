@@ -1,0 +1,35 @@
+name: STM32F4 CMake 自动编译流水线
+# 触发条件：推送代码、提交PR、网页手动运行
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 拉取仓库全部源码
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      # 2. 安装Linux交叉编译环境
+      - name: 安装ARM GCC、CMake、Ninja
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-arm-none-eabi cmake ninja-build
+
+      # 3. CMake配置+完整编译（对应VSCode里all目标）
+      - name: 编译固件
+        run: |
+          cmake --preset stm32-f4-debug
+          cmake --build --preset stm32-f4-debug
+
+      # 4. 上传编译好的hex/bin/elf固件，流水线结束可下载
+      - name: 上传固件产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: STM32_F4_编译固件
+          path: out/build/stm32-f4-debug/*.{elf,hex,bin}

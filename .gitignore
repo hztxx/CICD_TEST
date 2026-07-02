@@ -1,0 +1,12 @@
+# CMake编译产物
+out/
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+*.elf *.hex *.bin
+
+# VSCode缓存
+.vscode/.cache
+.DS_Store
