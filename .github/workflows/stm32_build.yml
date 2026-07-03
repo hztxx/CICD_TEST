@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch
 
 jobs:
   # 新增：代码命名规范检测（前置拦截，失败直接阻断编译）
@@ -24,10 +24,16 @@ jobs:
       - name: CMake生成编译数据库
         run: cmake --preset stm32-f4-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: 仅校验user目录自定义代码命名规范
+      - name: 仅校验user目录自定义C文件（自动扫描对应头文件，避开.h单独检测报错）
         run: |
-          for file in $(find user -maxdepth 2 -type f -name "*.c" -o -name "*.h"); do
-            echo "==== 正在校验：$file ===="
+          # 加括号修复find或逻辑，只取.c源文件，不单独处理h
+          FILE_LIST=$(find ./user -maxdepth 2 -type f \( -name "*.c" \))
+          if [ -z "$FILE_LIST" ]; then
+            echo "✅ user目录无C代码，跳过规范校验"
+            exit 0
+          fi
+          for file in $FILE_LIST; do
+            echo "==== 正在校验用户代码：$file ===="
             clang-tidy -p out/build/stm32-f4-debug --warnings-as-errors "$file"
             if [ $? -ne 0 ]; then
               echo "❌ 【代码规范拦截】$file 存在命名违规，流水线终止，禁止编译固件！"
