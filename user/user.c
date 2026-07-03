@@ -5,13 +5,13 @@
 static StUserData g_user_main_data;
 
 // 静态全局 s_前缀
-static uint16_t s_user_timeout = k_user_default_timeout;
+static uint16_t g_user_timeout = k_user_default_timeout;
 
 void user_init(void)
 {
     // 局部变量 纯小写下划线
     uint16_t buf_index = 0;
-    
+
     // 清空全局数据
     for(buf_index = 0; buf_index < USER_DATA_MAX_LEN; buf_index++)
     {
@@ -36,5 +36,5 @@ void user_set_data(StUserData *data, const uint8_t *src, uint16_t len)
 
 uint16_t user_get_timeout(void)
 {
-    return s_user_timeout;
+    return g_user_timeout;
 }
