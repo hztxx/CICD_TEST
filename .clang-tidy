@@ -1,12 +1,14 @@
+# .clang-tidy
+# 启用所有检查，但排除不需要的项
 Checks: >
   *,
   -llvm-header-guard,
-  readability-identifier-naming,
   -bugprone-easily-swappable-parameters,
   -misc-unused-parameters,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-init-variables,
   -cppcoreguidelines-avoid-non-const-global-variables
+
 CheckOptions:
   # 全局变量：g_前缀 + 小写下划线 g_uart_handle
   - key: readability-identifier-naming.GlobalVariableCase
@@ -27,8 +29,8 @@ CheckOptions:
   - key: readability-identifier-naming.ConstantPrefix
     value: k_
   # 宏定义：全大写 UART_RX_BUF_LEN
-  - key: readability-identifier-naming.MacroCase
-    value: upper_case
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE          # 注意是 MacroDefinitionCase 不是 MacroCase
   # 函数：小写下划线 void uart_send_data()
   - key: readability-identifier-naming.FunctionCase
     value: lower_case
@@ -38,8 +40,12 @@ CheckOptions:
   # 枚举：大驼峰 EnumState
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
-  # 枚举值：全大写 STATE_IDLE
+  # 枚举值：全大写 STATE_IDLE (必须是 UPPER_CASE)
   - key: readability-identifier-naming.EnumConstantCase
-    value: upper_case
-# 只扫描user目录用户代码，屏蔽Drivers库所有告警
+    value: UPPER_CASE
+  # 类型别名：大驼峰
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+
+# 只显示 user 目录下的警告，忽略库文件（Drivers等）
 HeaderFilterRegex: '^(user\/.*)$'
