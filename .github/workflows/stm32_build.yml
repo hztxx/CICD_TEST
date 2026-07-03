@@ -15,18 +15,21 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 安装依赖：clang-tidy、ARM GCC、CMake
+      - name: 全局安装编译依赖
         run: |
           sudo apt update
           sudo apt install -y gcc-arm-none-eabi cmake ninja-build clang-tidy
 
-      # 生成compile_commands.json编译数据库
-      - name: CMake生成编译数据库
-        run: cmake --preset stm32-f4-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-      - name: 仅校验user目录自定义C文件（自动扫描对应头文件，避开.h单独检测报错）
+      # 配置 + 完整构建，生成compile_commands.json
+      - name: CMake构建生成编译数据库
         run: |
-          # 加括号修复find或逻辑，只取.c源文件，不单独处理h
+          cmake --preset stm32-f4-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build --preset stm32-f4-debug
+          # 把编译数据库复制到项目根目录，规避路径查找失败
+          cp out/build/stm32-f4-debug/compile_commands.json ./
+
+      - name: 仅校验user目录自定义C文件
+        run: |
           FILE_LIST=$(find ./user -maxdepth 2 -type f \( -name "*.c" \))
           if [ -z "$FILE_LIST" ]; then
             echo "✅ user目录无C代码，跳过规范校验"
@@ -34,7 +37,8 @@ jobs:
           fi
           for file in $FILE_LIST; do
             echo "==== 正在校验用户代码：$file ===="
-            clang-tidy -p out/build/stm32-f4-debug --warnings-as-errors "$file"
+            # -p . 读取根目录的编译数据库
+            clang-tidy -p . --warnings-as-errors "$file"
             if [ $? -ne 0 ]; then
               echo "❌ 【代码规范拦截】$file 存在命名违规，流水线终止，禁止编译固件！"
               exit 1
@@ -47,24 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: code-style-check
     steps:
-      # 1. 拉取仓库全部源码
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      # 2. 安装Linux交叉编译环境
-      - name: 安装ARM GCC、CMake、Ninja
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-arm-none-eabi cmake ninja-build
-
-      # 3. CMake配置+完整编译（对应VSCode里all目标）
+      # 无需重复安装依赖，只做编译
       - name: 编译固件
         run: |
           cmake --preset stm32-f4-debug
           cmake --build --preset stm32-f4-debug
 
-      # 4. 上传编译好的hex/bin/elf固件，流水线结束可下载
-      - name: 上传固件产物
+      - name: 上传编译好的hex/bin/elf固件
         uses: actions/upload-artifact@v4
         with:
           name: STM32_F4_编译固件
