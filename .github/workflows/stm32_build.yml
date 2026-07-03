@@ -1,5 +1,5 @@
 name: STM32F4 CMake 自动编译流水线
-# 触发条件：推送代码、提交PR、网页手动运行
+
 on:
   push:
     branches: [ main ]
@@ -8,61 +8,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 代码命名规范检测（前置拦截，失败直接阻断编译）
+  # ==================== 代码规范检测 ====================
   code-style-check:
     runs-on: ubuntu-latest
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 全局安装编译依赖
+      - name: 安装编译依赖
         run: |
           sudo apt update
           sudo apt install -y gcc-arm-none-eabi cmake ninja-build clang-tidy
 
-      # 配置 + 完整构建，生成compile_commands.json
-      - name: CMake构建生成编译数据库
+      # 尝试恢复构建目录缓存（基于 CMake 配置文件和预设）
+      - name: 恢复 CMake 构建缓存
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: out/build/stm32-f4-debug
+          key: ${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', 'cmake/**', 'CMakePresets.json') }}
+
+      - name: CMake 配置与构建
         run: |
           cmake --preset stm32-f4-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cmake --build --preset stm32-f4-debug
-          # 把编译数据库复制到项目根目录，规避路径查找失败
+          # 复制编译数据库到根目录，方便 clang-tidy 使用
           cp out/build/stm32-f4-debug/compile_commands.json ./
 
-      - name: 仅校验user目录自定义C文件
-        run: |
-          # 使用 find -print0 与 while read 安全处理特殊文件名
-          file_count=0
-          find ./user -maxdepth 2 -type f -name "*.c" -print0 | while IFS= read -r -d '' file; do
-            file_count=$((file_count + 1))
-            echo "==== 正在校验用户代码：$file ===="
-            # --warnings-as-errors 必须提供参数，将 '*' 表示所有警告视为错误
-            # 如不需要升级为错误，直接删除 --warnings-as-errors='*'
-            clang-tidy -p . --warnings-as-errors='*' "$file"
-            if [ $? -ne 0 ]; then
-              echo "❌ 【代码规范拦截】$file 存在命名违规，流水线终止，禁止编译固件！"
-              exit 1
-            fi
-          done
-          # 注意：由于管道会创建子shell，exit 1 会退出子shell，
-          # 我们需要在循环后检查是否有错误发生。
-          # 更好的做法是捕获错误并存储，但管道内 exit 1 会导致 while 循环退出，
-          # 父shell 通过 $? 可能无法捕获。这里改用临时文件标记错误。
-          # 下面提供改进版，确保错误能正确终止整个 step。
+      - name: 校验 user 目录用户代码
         shell: bash
-      # 如需确保 while 循环内的 exit 能终止整个 step，可改用 process substitution：
-      # while IFS= read -r -d '' file; do ... done < <(find ... -print0)
-      # 但 GitHub Actions 的 bash 支持 process substitution，下面用另一种方式：
-      # 使用 set -o pipefail 和临时文件记录错误。
-      - name: 仅校验user目录自定义C文件（安全遍历）
         run: |
-          set -o pipefail
           error_flag=false
           file_count=0
           while IFS= read -r -d '' file; do
             file_count=$((file_count + 1))
             echo "==== 正在校验用户代码：$file ===="
             if ! clang-tidy -p . --warnings-as-errors='*' "$file"; then
-              echo "❌ 【代码规范拦截】$file 存在命名违规，流水线终止，禁止编译固件！"
+              echo "❌ 【代码规范拦截】$file 存在命名违规，流水线终止！"
               error_flag=true
               break
             fi
@@ -75,27 +57,37 @@ jobs:
           else
             echo "✅ user目录全部自定义代码命名规范校验通过"
           fi
-        shell: bash
 
-  # 编译任务依赖规范检测，规范报错则不会执行编译
+  # ==================== 固件编译 ====================
   build-firmware:
     runs-on: ubuntu-latest
-    needs: code-style-check
+    needs: code-style-check   # 规范通过后才编译
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 全局安装编译依赖
+      - name: 安装编译依赖
         run: |
           sudo apt update
           sudo apt install -y gcc-arm-none-eabi cmake ninja-build
 
-      - name: 编译固件
-        run: |
-          cmake --preset stm32-f4-debug
-          cmake --build --preset stm32-f4-debug
+      # 复用 code-style-check 生成的构建缓存
+      - name: 恢复 CMake 构建缓存
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: out/build/stm32-f4-debug
+          key: ${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', 'cmake/**', 'CMakePresets.json') }}
 
-      - name: 上传编译好的hex/bin/elf固件
+      # 仅当缓存未命中时才需要 cmake 配置（生成 Makefile），否则直接增量编译
+      - name: CMake 配置（若需要）
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: cmake --preset stm32-f4-debug
+
+      - name: 编译固件
+        run: cmake --build --preset stm32-f4-debug
+
+      - name: 上传固件
         uses: actions/upload-artifact@v4
         with:
           name: STM32_F4_编译固件
