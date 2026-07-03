@@ -1,5 +1,4 @@
 # .clang-tidy
-# 启用所有检查，但排除不需要的项
 Checks: >
   *,
   -llvm-header-guard,
@@ -7,10 +6,12 @@ Checks: >
   -misc-unused-parameters,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-init-variables,
-  -cppcoreguidelines-avoid-non-const-global-variables
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -altera-unroll-loops,
+  -misc-include-cleaner
 
 CheckOptions:
-  # 全局变量：g_前缀 + 小写下划线 g_uart_handle
+  # 全局变量（含静态全局）：g_前缀 + 小写下划线 g_user_timeout
   - key: readability-identifier-naming.GlobalVariableCase
     value: lower_case
   - key: readability-identifier-naming.GlobalVariablePrefix
@@ -18,7 +19,7 @@ CheckOptions:
   # 局部变量：纯小写下划线 uart_buf
   - key: readability-identifier-naming.VariableCase
     value: lower_case
-  # 静态变量 s_前缀 s_count
+  # 静态局部变量 s_前缀 s_count （只影响函数内的 static）
   - key: readability-identifier-naming.StaticVariableCase
     value: lower_case
   - key: readability-identifier-naming.StaticVariablePrefix
@@ -30,7 +31,7 @@ CheckOptions:
     value: k_
   # 宏定义：全大写 UART_RX_BUF_LEN
   - key: readability-identifier-naming.MacroDefinitionCase
-    value: UPPER_CASE          # 注意是 MacroDefinitionCase 不是 MacroCase
+    value: UPPER_CASE
   # 函数：小写下划线 void uart_send_data()
   - key: readability-identifier-naming.FunctionCase
     value: lower_case
@@ -40,12 +41,11 @@ CheckOptions:
   # 枚举：大驼峰 EnumState
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
-  # 枚举值：全大写 STATE_IDLE (必须是 UPPER_CASE)
+  # 枚举值：全大写 STATE_IDLE
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
   # 类型别名：大驼峰
   - key: readability-identifier-naming.TypedefCase
     value: CamelCase
 
-# 只显示 user 目录下的警告，忽略库文件（Drivers等）
 HeaderFilterRegex: '^(user\/.*)$'
